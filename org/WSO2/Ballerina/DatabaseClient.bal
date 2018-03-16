@@ -44,7 +44,7 @@ public function writeRawData(){
         output = databaseConnector.update("TRUNCATE issues",null);
     }
     catch (error e) {
-        log:printInfo("Error caused in deletion of existing data");
+        log:printInfo("Error caused in deletion of existing data : " + e.message);
     }
     
     try{
@@ -77,8 +77,8 @@ public function readData(string tableName)(json){
         state = "State,";
     }
 
-    table filteredData = databaseConnector.select("SELECT RepositoryName,Url,Days,Weeks,"+state+"githubId,product FROM "
-                                                  + tableName + " LEFT OUTER JOIN WSO2contributors ON " + tableName+
+    table filteredData = databaseConnector.select("SELECT RepositoryName,Url,Days,Weeks," + state + "githubId,product FROM "
+                                                  + tableName + " LEFT OUTER JOIN WSO2contributors ON " + tableName +
                                                   ".GithubId=WSO2contributors.userId LEFT OUTER JOIN product ON "+
                                                   tableName + ".RepositoryName=product.RepoName WHERE
                                                   WSO2contributors.userId is null",null,null);

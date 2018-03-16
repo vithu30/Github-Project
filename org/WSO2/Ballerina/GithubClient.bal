@@ -30,19 +30,19 @@ int repositoryIterator;
 json response;
 json issues;
 json pullRequests;
+error typeConversionError;
 http:HttpClient httpGithubClient = create http:HttpClient ("https://api.github.com/graphql",{});
 
 public function getRepositories () (collections:Vector) {
     endpoint <http:HttpClient> httpGithubEP {
         httpGithubClient;
     }
-
     string QUERY;
     collections:Vector responseVector = {vec:[]};
     http:OutRequest httpRequest;
     http:InResponse httpResponse;
 
-    while(hasNextPage=="true"){
+    while(hasNextPage == "true"){
         httpRequest = {};
         httpResponse = {};
         QUERY = string `{
@@ -90,7 +90,10 @@ public function getPullRequests (collections:Vector responseVector) {
     hasNextPage = "true";
 
     while(pageIterator < numberOfPages) {
-        response, _ = (json)responseVector.get(pageIterator);
+        response, typeConversionError = (json)responseVector.get(pageIterator);
+        if(typeConversionError != null){
+            log:printInfo("Error in conversion to json : " + typeConversionError.message);
+        }
         numberOfRepositories = lengthof response.data.organization.repositories.nodes;
         repositoryIterator = 0;
         while(repositoryIterator < numberOfRepositories) {
@@ -168,7 +171,10 @@ public function getIssues (collections:Vector responseVector) {
     hasNextPage = "true";
 
     while(pageIterator < numberOfPages) {
-        response,_ = (json)responseVector.get(pageIterator);
+        response,typeConversionError = (json)responseVector.get(pageIterator);
+        if(typeConversionError != null){
+            log:printInfo("Error in conversion to json : " + typeConversionError.message);
+        }
         numberOfRepositories = lengthof response.data.organization.repositories.nodes;
         repositoryIterator = 0;
         while(repositoryIterator < numberOfRepositories) {
@@ -177,7 +183,7 @@ public function getIssues (collections:Vector responseVector) {
             endCursor = "";
             http:OutRequest httpReq;
             http:InResponse httpResp;
-            while(hasNextPage=="true"){
+            while(hasNextPage == "true"){
                 httpReq = {};
                 httpResp = {};
 

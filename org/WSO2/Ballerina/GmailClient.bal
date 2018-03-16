@@ -143,21 +143,21 @@ public function generateMailBody(json pullRequests, json issues) {
         while(iterator < lengthof pullRequests){
             product = pullRequests[iterator].product != null ? pullRequests[iterator].product.toString() :
                       "No build defined";
-            if(product==str){
+            if(product == str){
                 pullRequestCount = pullRequestCount + 1;
                 pullRequestMessage = pullRequestMessage +
                 "<tr>
-                    <td style=\"font-size:12px;\">"+product+"</td>
-                    <td style=\"font-size:12px;\">"+pullRequests[iterator].RepositoryName.toString()+"</td>
-                    <td style=\"font-size:12px;\">"+pullRequests[iterator].Url.toString()+"</td>
-                    <td style=\"font-size:12px;\">"+pullRequests[iterator].githubId.toString()+"</td>
-                    <td style=\"font-size:12px;\">"+pullRequests[iterator].Days.toString()+"</td>
-                    <td style=\"font-size:12px;\">"+pullRequests[iterator].Weeks.toString()+"</td>
-                    <td style=\"font-size:12px;\">"+pullRequests[iterator].State.toString()+"</td>
+                    <td style=\"font-size:12px;\">" + product + "</td>
+                    <td style=\"font-size:12px;\">" + pullRequests[iterator].RepositoryName.toString() + "</td>
+                    <td style=\"font-size:12px;\">" + pullRequests[iterator].Url.toString() + "</td>
+                    <td style=\"font-size:12px;\">" + pullRequests[iterator].githubId.toString() + "</td>
+                    <td style=\"font-size:12px;\">" + pullRequests[iterator].Days.toString() + "</td>
+                    <td style=\"font-size:12px;\">" + pullRequests[iterator].Weeks.toString() + "</td>
+                    <td style=\"font-size:12px;\">" + pullRequests[iterator].State.toString() + "</td>
                 </tr>";
             }
 
-            iterator = iterator +1;
+            iterator = iterator + 1;
         }
 
         iterator = 0;
@@ -165,27 +165,27 @@ public function generateMailBody(json pullRequests, json issues) {
         while(iterator < lengthof issues){
             product = issues[iterator].product != null ? issues[iterator].product.toString() : "No build defined";
 
-            if(product==str){
+            if(product == str){
                 issuesCount = issuesCount + 1;
                 issueMessage = issueMessage +
                    "<tr>
-                    <td style=\"font-size:12px;\">"+product+"</td>
-                    <td style=\"font-size:12px;\">"+issues[iterator].RepositoryName.toString()+"</td>
-                    <td style=\"font-size:12px;\">"+issues[iterator].Url.toString()+"</td>
-                    <td style=\"font-size:12px;\">"+issues[iterator].githubId.toString()+"</td>
-                    <td style=\"font-size:12px;\">"+issues[iterator].Days.toString()+"</td>
-                    <td style=\"font-size:12px;\">"+issues[iterator].Weeks.toString()+"</td>
+                    <td style=\"font-size:12px;\">"+product + "</td>
+                    <td style=\"font-size:12px;\">" + issues[iterator].RepositoryName.toString() + "</td>
+                    <td style=\"font-size:12px;\">" + issues[iterator].Url.toString() + "</td>
+                    <td style=\"font-size:12px;\">" + issues[iterator].githubId.toString() + "</td>
+                    <td style=\"font-size:12px;\">" + issues[iterator].Days.toString() + "</td>
+                    <td style=\"font-size:12px;\">" + issues[iterator].Weeks.toString() + "</td>
                     </tr>";
             }
             iterator = iterator + 1;
         }
         iterator = 0;
 
-        if(pullRequestCount>0 || issuesCount > 0){
+        if(pullRequestCount > 0 || issuesCount > 0){
             if(checkAccessToken(accessToken)){
                 accessToken = refreshAccessToken();
             }
-            if(pullRequestCount > 0 && issuesCount >0){
+            if(pullRequestCount > 0 && issuesCount > 0){
                 message = "<html>" +
                           header +
                           "<h2>
@@ -193,7 +193,7 @@ public function generateMailBody(json pullRequests, json issues) {
                           </h2>
                           <body style=\"margin:0; padding:0;\">" +
                           prTableHeader +
-                          pullRequestMessage+
+                          pullRequestMessage +
                           "</table>
                           <h2>
                             \n Issues from non WSO2 committers \n
@@ -219,7 +219,7 @@ public function generateMailBody(json pullRequests, json issues) {
                 }
                 else{
                     message = "<html>"+
-                              header+
+                              header +
                               "<h2>
                                   \n Issues from non WSO2 committers \n
                               </h2>
