@@ -20,20 +20,23 @@ import ballerina.data.sql;
 import ballerina.time;
 import ballerina.log;
 import ballerina.io;
+import ballerina.config;
 
 int openFor;
 int pullRequestArrayIndex;
 int issueArrayIndex;
 int[] update;
 string createdAt;
+string username = config:getGlobalValue("username");
+string password = config:getGlobalValue("password");
 time:Time createdTime;
 sql:Parameter[][] issueArray = [];
 sql:Parameter[][] pullRequestArray = [];
 
 public function writeRawData(){
     endpoint<sql:ClientConnector> databaseConnector {
-             create sql:ClientConnector(sql:DB.MYSQL, "localhost", 3306, "FilteredData", "root", "Password.123",
-{maximumPoolSize:5, url:"jdbc:mysql://localhost:3306/FilteredData?useSSL=false"});
+             create sql:ClientConnector(sql:DB.MYSQL, "localhost", 3306, "FilteredData", username, password,
+                            {maximumPoolSize:5, url:"jdbc:mysql://localhost:3306/FilteredData?useSSL=false"});
     }
     
     try{
@@ -66,7 +69,7 @@ public function writeRawData(){
 
 public function readData(string tableName)(json){
     endpoint<sql:ClientConnector> databaseConnector {
-        create sql:ClientConnector(sql:DB.MYSQL, "localhost", 3306, "FilteredData", "root", "Password.123",
+        create sql:ClientConnector(sql:DB.MYSQL, "localhost", 3306, "FilteredData", username, password,
                                    {maximumPoolSize:5, url:"jdbc:mysql://localhost:3306/FilteredData?useSSL=false"});
     }
     string state = "";
