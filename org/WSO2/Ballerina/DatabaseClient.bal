@@ -36,8 +36,13 @@ public function writeRawData(){
 {maximumPoolSize:5, url:"jdbc:mysql://localhost:3306/FilteredData?useSSL=false"});
     }
     
-    int output = databaseConnector.update("TRUNCATE pullRequests",null);
-    output = databaseConnector.update("TRUNCATE issues",null);
+    try{
+        int output = databaseConnector.update("TRUNCATE pullRequests",null);
+        output = databaseConnector.update("TRUNCATE issues",null);
+    }
+    catch (error e) {
+        log:printInfo("Error caused in deletion of existing data");
+    }
     
     try{
         update = databaseConnector.batchUpdate("INSERT INTO pullRequests
