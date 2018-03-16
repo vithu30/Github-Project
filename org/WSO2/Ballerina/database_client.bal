@@ -19,7 +19,6 @@ package org.WSO2.Ballerina;
 import ballerina.data.sql;
 import ballerina.time;
 import ballerina.log;
-import ballerina.io;
 import ballerina.config;
 
 int openFor;
@@ -66,7 +65,6 @@ public function writeRawData(){
     
 }
 
-
 public function readData(string tableName)(json){
     endpoint<sql:ClientConnector> databaseConnector {
         create sql:ClientConnector(sql:DB.MYSQL, "localhost", 3306, "FilteredData", username, password,
@@ -77,19 +75,18 @@ public function readData(string tableName)(json){
         state = "State,";
     }
 
-    table filteredData = databaseConnector.select("SELECT RepositoryName,Url,Days,Weeks," + state + "githubId,product FROM "
-                                                  + tableName + " LEFT OUTER JOIN WSO2contributors ON " + tableName +
+    table filteredData = databaseConnector.select("SELECT RepositoryName,Url,Days,Weeks," + state +
+                                                  "githubId,product FROM "  + tableName +
+                                                  " LEFT OUTER JOIN WSO2contributors ON " + tableName +
                                                   ".GithubId=WSO2contributors.userId LEFT OUTER JOIN product ON "+
                                                   tableName + ".RepositoryName=product.RepoName WHERE
                                                   WSO2contributors.userId is null",null,null);
 
-    json jsonData;
-    error typeConversionError;
-    jsonData, typeConversionError = <json>filteredData;
+   
+    var jsonData, typeConversionError = <json>filteredData;
     if(typeConversionError != null){
         log:printInfo("Error in converting table to json : " + typeConversionError.message);
     }
-    
     return jsonData;
 }
 
@@ -120,8 +117,6 @@ public function generateData(json jsonPayload, string dataType){
         openDays = {sqlType:sql:Type.INTEGER, value:(openFor/24)};
         openWeeks = {sqlType:sql:Type.INTEGER, value:(openFor/(24*7))};
         
-
-        
         if(dataType=="pullRequest"){
             if(lengthof jsonPayload.nodes[iterator].reviews.nodes == 1){
                 stringState = jsonPayload.nodes[iterator].reviews.nodes[0].state.toString();
@@ -130,7 +125,6 @@ public function generateData(json jsonPayload, string dataType){
                 stringState = "REVIEW_REQUIRED";
             }
             state = {sqlType:sql:Type.VARCHAR, value:stringState};
-            io:println(state);
             prParams = [repoName,url,githubId,openDays,openWeeks,state];
             pullRequestArray[pullRequestArrayIndex] = prParams;
             pullRequestArrayIndex = pullRequestArrayIndex + 1;

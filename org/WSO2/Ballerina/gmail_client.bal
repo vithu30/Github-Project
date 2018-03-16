@@ -231,7 +231,7 @@ public function generateMailBody(json pullRequests, json issues) {
                 }
             }
             //to =  mailingList[index] != "" ? mailingList[index] : "vithu9330@gmail.com";
-            send(to,"Open PRs and issues from non WSO2 committers : "+str,accessToken,message);
+            send(to,"Open PRs and issues from non WSO2 committers : " + str,accessToken,message);
         }
         index = index + 1;
     }

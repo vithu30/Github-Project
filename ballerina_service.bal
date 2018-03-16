@@ -29,10 +29,8 @@ sql:ClientConnector clientConnector = create sql:ClientConnector(
 
 
 service<http> ballerinaService {
-    @http:resourceConfig {
-        methods:["GET"]
-    }
     
+    @http:resourceConfig {methods:["GET"]}
     resource pullRequests(http:Connection httpConnection, http:InRequest inRequest) {
         http:OutResponse outResponse = {};
 
