@@ -32,6 +32,8 @@ time:Time createdTime;
 sql:Parameter[][] issueArray = [];
 sql:Parameter[][] pullRequestArray = [];
 
+
+@Description { value:"write pull requests and issues data into database"}
 public function writeRawData(){
     endpoint<sql:ClientConnector> databaseConnector {
              create sql:ClientConnector(sql:DB.MYSQL, "localhost", 3306, "FilteredData", username, password,
@@ -65,6 +67,9 @@ public function writeRawData(){
     
 }
 
+
+@Description { value:"Reading data from database"}
+@Param { value:"tableName: Name of the table from which data has to be fetched"}
 public function readData(string tableName)(json){
     endpoint<sql:ClientConnector> databaseConnector {
         create sql:ClientConnector(sql:DB.MYSQL, "localhost", 3306, "FilteredData", username, password,
@@ -74,6 +79,11 @@ public function readData(string tableName)(json){
     if(tableName == "pullRequests"){
         state = "State,";
     }
+
+    // Query to return issues / pull requests sent by outsiders ,  repositories ,
+    // respective product , url of issue and open duration by comparing
+    // list of whole open issues / pull reuqests with list of users from WSO2
+    // and product, repositories mapping.
 
     table filteredData = databaseConnector.select("SELECT RepositoryName,Url,Days,Weeks," + state +
                                                   "githubId,product FROM "  + tableName +
@@ -90,6 +100,10 @@ public function readData(string tableName)(json){
     return jsonData;
 }
 
+
+@Description { value:"Convert data from json to sql:Parameter type"}
+@Param { value:"jsonPayload: json data read obtained from github API"}
+@Param { value:"dataType: can be either issues or pull requests"}
 public function generateData(json jsonPayload, string dataType){
     int iterator;
     sql:Parameter repoName;

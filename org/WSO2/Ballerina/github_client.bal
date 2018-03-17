@@ -24,13 +24,14 @@ import ballerina.log;
 boolean hasNextPage = true;
 string repositoryName;
 int numberOfRepositories;
-//json response;
 json issues;
 json pullRequests;
 http:OutRequest httpOutRequest;
 http:InResponse httpInResponse;
 http:HttpClient httpGithubClient = create http:HttpClient ("https://api.github.com/graphql",{});
 
+
+@Description { value:"get all repositories name by traversing all pages"}
 public function getRepositories () (collections:Vector) {
     endpoint <http:HttpClient> httpGithubEP {
         httpGithubClient;
@@ -79,6 +80,8 @@ public function getRepositories () (collections:Vector) {
     return responseVector;
 }
 
+@Description { value:"get pull requests of given repositories"}
+@Param { value:"responseVector: vector contains all repositories name"}
 public function getPullRequests (collections:Vector responseVector) {
     endpoint <http:HttpClient> httpGithubEP {
         httpGithubClient;
@@ -144,8 +147,8 @@ public function getPullRequests (collections:Vector responseVector) {
                     log:printInfo("Error in post request : " + httpConnectError.message);
                 }
                 pullRequests = httpInResponse.getJsonPayload().data.organization.repository.pullRequests;
-                error typeConversionError;
-                hasNextPage, typeConversionError = <boolean > pullRequests.pageInfo.hasNextPage.toString();
+                error typeCastError;
+                hasNextPage, typeCastError = <boolean> pullRequests.pageInfo.hasNextPage.toString();
                 if(hasNextPage){
                     endCursor = "\"" + pullRequests.pageInfo.endCursor.toString() + "\"";
                 }
@@ -159,6 +162,9 @@ public function getPullRequests (collections:Vector responseVector) {
     }
 }
 
+
+@Description { value:"get issues of given repositories"}
+@Param { value:"responseVector: vector contains all repositories name"}
 public function getIssues (collections:Vector responseVector) {
     endpoint <http:HttpClient> httpGithubClient {
         create http:HttpClient ("https://api.github.com/graphql",{});
@@ -170,9 +176,9 @@ public function getIssues (collections:Vector responseVector) {
     hasNextPage = true;
 
     while(pageIterator < numberOfPages) {
-        var response, typeCastError = (json)responseVector.get(pageIterator);
-        if(typeCastError != null){
-            log:printInfo("Error in conversion to json : " + typeCastError.message);
+        var response, typeConversionError = (json)responseVector.get(pageIterator);
+        if(typeConversionError != null){
+            log:printInfo("Error in conversion to json : " + typeConversionError.message);
         }
         numberOfRepositories = lengthof response.data.organization.repositories.nodes;
         int repositoryIterator;
@@ -218,9 +224,9 @@ public function getIssues (collections:Vector responseVector) {
                 if(httpConnectError != null){
                     log:printInfo("Error in post request : " + httpConnectError.message);
                 }
+                error typeCastError;
                 issues = httpInResponse.getJsonPayload().data.organization.repository.issues;
-                error typeConversionError;
-                hasNextPage, typeConversionError = <boolean > issues.pageInfo.hasNextPage.toString();
+                hasNextPage, typeCastError = <boolean> issues.pageInfo.hasNextPage.toString();
                 if(hasNextPage){
                     endCursor = "\"" + issues.pageInfo.endCursor.toString() + "\"";
                 }

@@ -34,9 +34,14 @@ service<http> ballerinaService {
     resource pullRequests(http:Connection httpConnection, http:InRequest inRequest) {
         http:OutResponse outResponse = {};
 
-        json jsonPayload = databaseConnector("SELECT RepositoryName,Url,Days,Weeks,githubId,product,State FROM pullRequests
-        LEFT OUTER JOIN WSO2contributors ON pullRequests.GithubId=WSO2contributors.userId LEFT OUTER JOIN product ON
-                pullRequests.RepositoryName=product.RepoName WHERE WSO2contributors.userId is null");
+        // Query to return pull requests sent by outsiders ,  repositories ,
+        // respective product , url of pull request and open duration by
+        // comparing list whole open pull requests with list of users from WSO2
+        // and product, repositories mapping.
+
+        json jsonPayload = databaseConnector("SELECT RepositoryName,Url,Days,Weeks,githubId,product,State FROM
+        pullRequests LEFT OUTER JOIN WSO2contributors ON pullRequests.GithubId=WSO2contributors.userId LEFT OUTER JOIN
+        product ON pullRequests.RepositoryName=product.RepoName WHERE WSO2contributors.userId is null");
 
         int iterator;
         while(iterator < lengthof jsonPayload){
@@ -53,9 +58,16 @@ service<http> ballerinaService {
 
     resource summaryOfPullRequests(http:Connection httpConnection,http:InRequest inRequest){
         http:OutResponse outResponse = {};
-        json jsonPayload = databaseConnector("SELECT productName, SUM(totalNum) as Total FROM (SELECT IFNULL(product.Product,\"unknown\") as productName, COUNT(*) as totalNum FROM pullRequests LEFT OUTER JOIN
-WSO2contributors ON pullRequests.GithubId=WSO2contributors.userId LEFT OUTER JOIN product ON
-pullRequests.RepositoryName=product.RepoName WHERE WSO2contributors.userId is null GROUP BY product.Product) AS T GROUP BY productName ");
+
+        // Query to return the total number of pull requests sent by outsiders
+        // for each product where repositories which do not have jenkins build
+        // also accumulated under 'unknown'.
+        
+        json jsonPayload = databaseConnector("SELECT productName, SUM(totalNum) as Total FROM
+        (SELECT IFNULL(product.Product,\"unknown\") as productName, COUNT(*) as totalNum FROM
+        pullRequests LEFT OUTER JOIN WSO2contributors ON pullRequests.GithubId=WSO2contributors.userId
+        LEFT OUTER JOIN product ON pullRequests.RepositoryName=product.RepoName WHERE WSO2contributors.userId is null
+        GROUP BY product.Product) AS T GROUP BY productName ");
         
         outResponse.addHeader("Access-Control-Allow-Origin","*");
         outResponse.setJsonPayload(jsonPayload);
@@ -65,6 +77,11 @@ pullRequests.RepositoryName=product.RepoName WHERE WSO2contributors.userId is nu
     
     resource issues(http:Connection httpConnection, http:InRequest inRequest){
         http:OutResponse outResponse = {};
+
+        // Query to return issues sent by outsiders ,  repositories ,
+        // respective product , url of issue and open duration by
+        // comparing list of whole open issues with list of users from WSO2
+        // and product, repositories mapping.
     
         json jsonPayload = databaseConnector("SELECT RepositoryName,Url,Days,Weeks,githubId,product FROM issues
         LEFT OUTER JOIN WSO2contributors ON issues.GithubId=WSO2contributors.userId LEFT OUTER JOIN product ON
@@ -86,9 +103,16 @@ pullRequests.RepositoryName=product.RepoName WHERE WSO2contributors.userId is nu
 
     resource summaryOfIssues(http:Connection httpConnection, http:InRequest inRequest){
         http:OutResponse outResponse = {};
-        json jsonPayload = databaseConnector("SELECT productName, SUM(totalNum) as Total FROM (SELECT IFNULL(product.Product,\"unknown\") as productName, COUNT(*) as totalNum FROM issues LEFT OUTER JOIN
-WSO2contributors ON issues.GithubId=WSO2contributors.userId LEFT OUTER JOIN product ON
-issues.RepositoryName=product.RepoName WHERE WSO2contributors.userId is null GROUP BY product.Product) AS T GROUP BY productName");
+
+        // Query to return the total number of issues sent by outsiders
+        // for each product where repositories which do not have jenkins build
+        // also accumulated under 'unknown'.
+        
+        json jsonPayload = databaseConnector("SELECT productName, SUM(totalNum) as Total FROM
+        (SELECT IFNULL(product.Product,\"unknown\") as productName, COUNT(*) as totalNum FROM issues LEFT OUTER JOIN
+        WSO2contributors ON issues.GithubId=WSO2contributors.userId LEFT OUTER JOIN product ON
+        issues.RepositoryName=product.RepoName WHERE WSO2contributors.userId is null GROUP BY product.Product)
+        AS T GROUP BY productName");
         
         outResponse.addHeader("Access-Control-Allow-Origin","*");
         outResponse.setJsonPayload(jsonPayload);
@@ -97,6 +121,8 @@ issues.RepositoryName=product.RepoName WHERE WSO2contributors.userId is null GRO
     }
 }
 
+@Description { value:"establish connection with database and fetch data"}
+@Param { value:"stringPayload: mySQL query as string"}
 function databaseConnector(string stringPayload)(json jsonPayload){
     endpoint<sql:ClientConnector> testDB {
         clientConnector;

@@ -26,6 +26,11 @@ http:HttpConnectorError httpConnectorError;
 http:OutRequest httpRequest;
 http:InResponse httpResponse;
 
+@Description { value:"function for sending mails"}
+@Param { value:"to: recipient's mail address "}
+@Param { value:"subject: mail subject"}
+@Param { value:"accessToken: The access token of gmail account"}
+@Param { value:"message: message to be sent in mail"}
 public function send(string to,string subject, string accessToken, string message){
     endpoint<http:HttpClient> httpConnectorEP {
         httpClient;
@@ -59,16 +64,19 @@ public function send(string to,string subject, string accessToken, string messag
     }
 }
 
+@Description { value:"generate mail body with tables"}
+@Param { value:"pullRequests: list of pull requests from non-WSO2 committers"}
+@Param { value:"issues: list of issues from non-WSO2 committers"}
 public function generateMailBody(json pullRequests, json issues) {
     string [] productList = [];
-    //string [] mailingList = [];
+    string [] mailingList = [];
 
     productList = ["API Management","Automation","Ballerina","Cloud","Financial Solutions",
                "Identity and Access Management","Integration","IoT","Platform","Platform Extension",
                    "Research","Streaming Analytics","unknown","No build defined"];
-    //mailingList = ["apim-group@wso2.com","","ballerina-group@wso2.com","cloud-group@wso2.com","",
-    //"iam-group@wso2.com","integration-group@wso2.com","iot-group@wso2.com","platform-group@wso2.com",
-    //"","research-group@wso2.com","analytics-group@wso2.com",""];
+    mailingList = ["apim-group@wso2.com","","ballerina-group@wso2.com","cloud-group@wso2.com","",
+    "iam-group@wso2.com","integration-group@wso2.com","iot-group@wso2.com","platform-group@wso2.com",
+    "","research-group@wso2.com","analytics-group@wso2.com",""];
 
     string message;
     string to;
@@ -79,8 +87,6 @@ public function generateMailBody(json pullRequests, json issues) {
     string pullRequestMessage;
     string issueMessage;
     string product;
-    //string userId;
-    to = "vithursa@wso2.com";
 
     string accessToken = refreshAccessToken();
 
@@ -230,13 +236,15 @@ public function generateMailBody(json pullRequests, json issues) {
                               </html>";
                 }
             }
-            //to =  mailingList[index] != "" ? mailingList[index] : "vithu9330@gmail.com";
+            to =  mailingList[index] != "" ? mailingList[index] : "vithu9330@gmail.com";
             send(to,"Open PRs and issues from non WSO2 committers : " + str,accessToken,message);
         }
         index = index + 1;
     }
 }
 
+@Description { value:"check whether the access token is expired or not"}
+@Param { value:"accessToken: access token of the gmail account"}
 public function checkAccessToken(string accessToken)(boolean){
     endpoint<http:HttpClient> httpConnector {
         create http:HttpClient("https://www.googleapis.com/oauth2/v1", {});
@@ -258,6 +266,7 @@ public function checkAccessToken(string accessToken)(boolean){
     return isExpired;
 }
 
+@Description { value:"generate new access token from refresh token"}
 public function refreshAccessToken () (string) {
     endpoint<http:HttpClient> refreshTokenHTTPEP {
         create http:HttpClient("https://www.googleapis.com/oauth2/v4", {});
