@@ -24,10 +24,10 @@ function main (string[] args) {
     Ballerina:getPullRequests(reposVector);
     Ballerina:getIssues(reposVector);
     Ballerina:writeRawData();
-    log:printInfo("writing success");
+    log:printInfo("successfully wrote to database");
     json pullRequests = Ballerina:readData("pullRequests");
     json issues = Ballerina:readData("issues");
-    log:printInfo("reading success");
+    log:printInfo("read filtered data from database");
     Ballerina:generateMailBody(pullRequests,issues);
-    log:printInfo("sending success");
+    log:printInfo("mail sending success");
 }

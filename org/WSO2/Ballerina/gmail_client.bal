@@ -66,14 +66,14 @@ public function send(string to,string subject, string accessToken, string messag
 @Param { value:"issues: list of issues from non-WSO2 committers"}
 public function generateMailBody(json pullRequests, json issues) {
     string [] productList = [];
-    //string [] mailingList = [];
+    string [] mailingList = [];
 
     productList = ["API Management","Automation","Ballerina","Cloud","Financial Solutions",
                "Identity and Access Management","Integration","IoT","Platform","Platform Extension",
                    "Research","Streaming Analytics","unknown","No build defined"];
-    //mailingList = ["apim-group@wso2.com","","ballerina-group@wso2.com","cloud-group@wso2.com","",
-    //"iam-group@wso2.com","integration-group@wso2.com","iot-group@wso2.com","platform-group@wso2.com",
-    //"","research-group@wso2.com","analytics-group@wso2.com",""];
+    mailingList = ["apim-group@wso2.com","","ballerina-group@wso2.com","cloud-group@wso2.com","",
+    "iam-group@wso2.com","integration-group@wso2.com","iot-group@wso2.com","platform-group@wso2.com",
+    "","research-group@wso2.com","analytics-group@wso2.com",""];
 
     string message;
     string to;
@@ -84,7 +84,6 @@ public function generateMailBody(json pullRequests, json issues) {
     string pullRequestMessage;
     string issueMessage;
     string product;
-    to = "vithursa@wso2.com";
     string accessToken = refreshAccessToken();
 
     string header = "<head>
@@ -96,7 +95,6 @@ public function generateMailBody(json pullRequests, json issues) {
                                 width: 75%;
                                 text-align: center;
                             }
-
                             td, th {
                                 border: 1.5px solid #17202a;
                                 text-align: left;
@@ -106,36 +104,33 @@ public function generateMailBody(json pullRequests, json issues) {
                     </head>";
 
     string prTableHeader = "<table
-                                cellspacing=\"1\"
-                                cellpadding=\"1\"
-                                border=\"1\"
-                                bgcolor=\"#F2F2F2\"
-                          >
-                                <tr bgcolor=\"#b4d0e8\">
-                                    <th>Product</th>
-                                    <th>Repository Name</th>
-                                    <th>URL</th>
-                                    <th>Github Id</th>
-                                    <th>Open Days</th>
-                                    <th>Open Weeks</th>
-                                    <th>State</th>
-                                </tr>";
+                                    cellspacing=\"1\"
+                                    cellpadding=\"1\"
+                                    border=\"1\"
+                                    bgcolor=\"#F2F2F2\" >
+                                    <tr bgcolor=\"#b4d0e8\">
+                                        <th>Product</th>
+                                        <th>Repository Name</th>
+                                        <th>URL</th>
+                                        <th>Github Id</th>
+                                        <th>Open Days</th>
+                                        <th>Open Weeks</th>
+                                        <th>State</th>
+                                    </tr>";
 
     string issueTableHeader = "<table
-                                cellspacing=\"1\"
-                                cellpadding=\"1\"
-                                border=\"1\"
-                                bgcolor=\"#F2F2F2\"
-                          >
-                                <tr bgcolor=\"#b4d0e8\">
-                                    <th>Product</th>
-                                    <th>Repository Name</th>
-                                    <th>URL</th>
-                                    <th>Github Id</th>
-                                    <th>Open Days</th>
-                                    <th>Open Weeks</th>
-                                </tr>";
-
+                                    cellspacing=\"1\"
+                                    cellpadding=\"1\"
+                                    border=\"1\"
+                                    bgcolor=\"#F2F2F2\" >
+                                    <tr bgcolor=\"#b4d0e8\">
+                                        <th>Product</th>
+                                        <th>Repository Name</th>
+                                        <th>URL</th>
+                                        <th>Github Id</th>
+                                        <th>Open Days</th>
+                                        <th>Open Weeks</th>
+                                    </tr>";
 
     foreach str in productList {
         pullRequestCount = 0;
@@ -233,7 +228,7 @@ public function generateMailBody(json pullRequests, json issues) {
                               </html>";
                 }
             }
-            //to =  mailingList[index] != "" ? mailingList[index] : "vithu9330@gmail.com";
+            to =  mailingList[index] != "" ? mailingList[index] : "vithu9330@gmail.com";
             send(to,"Open PRs and issues from non WSO2 committers : " + str,accessToken,message);
         }
         index = index + 1;
@@ -274,7 +269,6 @@ public function refreshAccessToken () (string) {
     string clientSecret = config:getGlobalValue("client_secret");
     string request = "grant_type=refresh_token" + "&client_id=" + clientId +
                      "&client_secret=" + clientSecret +"&refresh_token=" + refreshToken;
-
     http:OutRequest httpRequest = {};
     http:InResponse httpResponse = {};
     

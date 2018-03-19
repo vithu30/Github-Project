@@ -21,12 +21,12 @@ import ballerina.time;
 import ballerina.log;
 import ballerina.config;
 
-int pullRequestArrayIndex;
-int issueArrayIndex;
 string username = config:getGlobalValue("username");
 string password = config:getGlobalValue("password");
 sql:Parameter[][] issueArray = [];
 sql:Parameter[][] pullRequestArray = [];
+int pullRequestArrayIndex;
+int issueArrayIndex;
 
 @Description { value:"write pull requests and issues data into database"}
 public function writeRawData(){
