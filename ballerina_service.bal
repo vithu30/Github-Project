@@ -16,20 +16,23 @@
 
 import ballerina.net.http;
 import ballerina.data.sql;
+import ballerina.log;
+import ballerina.config;
 
+string username = config:getGlobalValue("username");
+string password = config:getGlobalValue("password");
 sql:ClientConnector clientConnector = create sql:ClientConnector(
                                         sql:DB.MYSQL,
                                         "localhost",
                                          3306,
                                         "FilteredData",
-                                        "root",
-                                        "Password.123",
+                                        username,
+                                        password,
                                         {maximumPoolSize:5,
                                             url:"jdbc:mysql://localhost:3306/FilteredData?useSSL=false"});
 
 
 service<http> ballerinaService {
-    
     @http:resourceConfig {methods:["GET"]}
     resource pullRequests(http:Connection httpConnection, http:InRequest inRequest) {
         http:OutResponse outResponse = {};
@@ -42,7 +45,6 @@ service<http> ballerinaService {
         json jsonPayload = databaseConnector("SELECT RepositoryName,Url,Days,Weeks,githubId,product,State FROM
         pullRequests LEFT OUTER JOIN WSO2contributors ON pullRequests.GithubId=WSO2contributors.userId LEFT OUTER JOIN
         product ON pullRequests.RepositoryName=product.RepoName WHERE WSO2contributors.userId is null");
-
         int iterator;
         while(iterator < lengthof jsonPayload){
             if(jsonPayload[iterator].product == null){
@@ -52,7 +54,6 @@ service<http> ballerinaService {
         }
         outResponse.addHeader("Access-Control-Allow-Origin","*");
         outResponse.setJsonPayload(jsonPayload);
-
         _ = httpConnection.respond(outResponse);
     }
 
@@ -66,12 +67,10 @@ service<http> ballerinaService {
         json jsonPayload = databaseConnector("SELECT productName, SUM(totalNum) as Total FROM
         (SELECT IFNULL(product.Product,\"unknown\") as productName, COUNT(*) as totalNum FROM
         pullRequests LEFT OUTER JOIN WSO2contributors ON pullRequests.GithubId=WSO2contributors.userId
-        LEFT OUTER JOIN product ON pullRequests.RepositoryName=product.RepoName WHERE WSO2contributors.userId is null
-        GROUP BY product.Product) AS T GROUP BY productName ");
-        
+        LEFT OUTER JOIN product ON pullRequests.RepositoryName=product.RepoName WHERE WSO2contributors.userId
+        is null GROUP BY product.Product) AS T GROUP BY productName ");
         outResponse.addHeader("Access-Control-Allow-Origin","*");
         outResponse.setJsonPayload(jsonPayload);
-
         _ = httpConnection.respond(outResponse);
     }
     
@@ -86,7 +85,6 @@ service<http> ballerinaService {
         json jsonPayload = databaseConnector("SELECT RepositoryName,Url,Days,Weeks,githubId,product FROM issues
         LEFT OUTER JOIN WSO2contributors ON issues.GithubId=WSO2contributors.userId LEFT OUTER JOIN product ON
         issues.RepositoryName=product.RepoName WHERE WSO2contributors.userId is null");
-
         int iterator;
         while(iterator < lengthof jsonPayload){
             if(jsonPayload[iterator].product == null){
@@ -94,10 +92,8 @@ service<http> ballerinaService {
             }
             iterator = iterator + 1;
         }
-        
         outResponse.addHeader("Access-Control-Allow-Origin","*");
         outResponse.setJsonPayload(jsonPayload);
-    
         _ = httpConnection.respond(outResponse);
     }
 
@@ -108,15 +104,13 @@ service<http> ballerinaService {
         // for each product where repositories which do not have jenkins build
         // also accumulated under 'unknown'.
         
-        json jsonPayload = databaseConnector("SELECT productName, SUM(totalNum) as Total FROM
-        (SELECT IFNULL(product.Product,\"unknown\") as productName, COUNT(*) as totalNum FROM issues LEFT OUTER JOIN
+        json jsonPayload = databaseConnector("SELECT productName, SUM(totalNum) as Total FROM (SELECT IFNULL
+        (product.Product,\"unknown\") as productName, COUNT(*) as totalNum FROM issues LEFT OUTER JOIN
         WSO2contributors ON issues.GithubId=WSO2contributors.userId LEFT OUTER JOIN product ON
-        issues.RepositoryName=product.RepoName WHERE WSO2contributors.userId is null GROUP BY product.Product)
-        AS T GROUP BY productName");
-        
+        issues.RepositoryName=product.RepoName WHERE WSO2contributors.userId is null GROUP BY
+        product.Product) AS T GROUP BY productName");
         outResponse.addHeader("Access-Control-Allow-Origin","*");
         outResponse.setJsonPayload(jsonPayload);
-    
         _ = httpConnection.respond(outResponse);
     }
 }
@@ -126,10 +120,12 @@ service<http> ballerinaService {
 function databaseConnector(string stringPayload)(json jsonPayload){
     endpoint<sql:ClientConnector> testDB {
         clientConnector;
-        }
-
+    }
     table data = testDB.select(stringPayload,null,null);
-    jsonPayload,_ = <json>data;
-    jsonPayload = jsonPayload;
+    error typeCastError;
+    jsonPayload, typeCastError = <json>data;
+    if(typeCastError != null){
+        log:printInfo("Error in casting : " + typeCastError.message);
+    }
     return;
 }

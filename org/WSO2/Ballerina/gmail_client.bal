@@ -23,8 +23,6 @@ import ballerina.log;
 
 http:HttpClient httpClient = create http:HttpClient("https://www.googleapis.com/gmail", {});
 http:HttpConnectorError httpConnectorError;
-http:OutRequest httpRequest;
-http:InResponse httpResponse;
 
 @Description { value:"function for sending mails"}
 @Param { value:"to: recipient's mail address "}
@@ -39,9 +37,8 @@ public function send(string to,string subject, string accessToken, string messag
     string contentType = "text/html; charset=iso-8859-1";
     string concatMessage = "";
 //string cc = "engineering-group@wso2.com,rohan@wso2.com,shankar@wso2.com";
-//string cc = "darsha.m3@gmail.com,vithu30@hotmail.com";
-    httpRequest = {};
-    httpResponse = {};
+    http:OutRequest httpRequest = {};
+    http:InResponse httpResponse = {};
     
     concatMessage = concatMessage + "to:" + to + "\n" +
                                     "subject:" + subject + "\n" +
@@ -69,14 +66,14 @@ public function send(string to,string subject, string accessToken, string messag
 @Param { value:"issues: list of issues from non-WSO2 committers"}
 public function generateMailBody(json pullRequests, json issues) {
     string [] productList = [];
-    string [] mailingList = [];
+    //string [] mailingList = [];
 
     productList = ["API Management","Automation","Ballerina","Cloud","Financial Solutions",
                "Identity and Access Management","Integration","IoT","Platform","Platform Extension",
                    "Research","Streaming Analytics","unknown","No build defined"];
-    mailingList = ["apim-group@wso2.com","","ballerina-group@wso2.com","cloud-group@wso2.com","",
-    "iam-group@wso2.com","integration-group@wso2.com","iot-group@wso2.com","platform-group@wso2.com",
-    "","research-group@wso2.com","analytics-group@wso2.com",""];
+    //mailingList = ["apim-group@wso2.com","","ballerina-group@wso2.com","cloud-group@wso2.com","",
+    //"iam-group@wso2.com","integration-group@wso2.com","iot-group@wso2.com","platform-group@wso2.com",
+    //"","research-group@wso2.com","analytics-group@wso2.com",""];
 
     string message;
     string to;
@@ -87,7 +84,7 @@ public function generateMailBody(json pullRequests, json issues) {
     string pullRequestMessage;
     string issueMessage;
     string product;
-
+    to = "vithursa@wso2.com";
     string accessToken = refreshAccessToken();
 
     string header = "<head>
@@ -236,7 +233,7 @@ public function generateMailBody(json pullRequests, json issues) {
                               </html>";
                 }
             }
-            to =  mailingList[index] != "" ? mailingList[index] : "vithu9330@gmail.com";
+            //to =  mailingList[index] != "" ? mailingList[index] : "vithu9330@gmail.com";
             send(to,"Open PRs and issues from non WSO2 committers : " + str,accessToken,message);
         }
         index = index + 1;
@@ -250,8 +247,8 @@ public function checkAccessToken(string accessToken)(boolean){
         create http:HttpClient("https://www.googleapis.com/oauth2/v1", {});
     }
     boolean isExpired = false;
-    httpRequest = {};
-    httpResponse = {};
+    http:OutRequest httpRequest = {};
+    http:InResponse httpResponse = {};
 
     httpRequest.addHeader("Content-Type", "application/x-www-form-urlencoded");
     httpRequest.setJsonPayload("access_token=" + accessToken);
@@ -278,8 +275,8 @@ public function refreshAccessToken () (string) {
     string request = "grant_type=refresh_token" + "&client_id=" + clientId +
                      "&client_secret=" + clientSecret +"&refresh_token=" + refreshToken;
 
-    httpRequest = {};
-    httpResponse = {};
+    http:OutRequest httpRequest = {};
+    http:InResponse httpResponse = {};
     
     httpRequest.setHeader("Content-Type", "application/x-www-form-urlencoded");
     httpRequest.setStringPayload(request);

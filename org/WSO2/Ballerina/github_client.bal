@@ -22,23 +22,19 @@ import ballerina.config;
 import ballerina.log;
 
 boolean hasNextPage = true;
-string repositoryName;
-int numberOfRepositories;
-json issues;
-json pullRequests;
-http:OutRequest httpOutRequest;
-http:InResponse httpInResponse;
 http:HttpClient httpGithubClient = create http:HttpClient ("https://api.github.com/graphql",{});
-
 
 @Description { value:"get all repositories name by traversing all pages"}
 public function getRepositories () (collections:Vector) {
     endpoint <http:HttpClient> httpGithubEP {
         httpGithubClient;
     }
+    log:printInfo("Connection established with github API");
     string QUERY;
     string endCursor = "";
     collections:Vector responseVector = {vec:[]};
+    http:OutRequest httpOutRequest;
+    http:InResponse httpInResponse;
     while(hasNextPage){
         httpOutRequest = {};
         httpInResponse = {};
@@ -55,8 +51,6 @@ public function getRepositories () (collections:Vector) {
                                 }
                             }
                         }`;
-
-
         httpOutRequest.addHeader("Authorization" , "Bearer " + config:getGlobalValue("access_token"));
         json jsonPayLoad = {query:QUERY};
         httpOutRequest.setJsonPayload(jsonPayLoad);
@@ -66,10 +60,10 @@ public function getRepositories () (collections:Vector) {
             log:printInfo("Error in post request : " + httpConnectorError.message);
         }
         json response = httpInResponse.getJsonPayload();
-        
         responseVector.add(response);
         error typeConversionError;
-        hasNextPage, typeConversionError = <boolean> response.data.organization.repositories.pageInfo.hasNextPage.toString();
+        hasNextPage, typeConversionError =
+                    <boolean> response.data.organization.repositories.pageInfo.hasNextPage.toString();
         if(typeConversionError != null){
             log:printInfo("Error occured in conversion to boolean : " + typeConversionError.message);
         }
@@ -77,21 +71,25 @@ public function getRepositories () (collections:Vector) {
             endCursor = "\"" + response.data.organization.repositories.pageInfo.endCursor.toString() + "\"";
         }
     }
+    log:printInfo("List of repositories is generated");
     return responseVector;
 }
 
-@Description { value:"get pull requests of given repositories"}
+@Description { value:"get pull requests of given repositories (with pagination)"}
 @Param { value:"responseVector: vector contains all repositories name"}
 public function getPullRequests (collections:Vector responseVector) {
     endpoint <http:HttpClient> httpGithubEP {
         httpGithubClient;
     }
-
+    log:printInfo("Connection established with github API");
     int numberOfPages = responseVector.vectorSize;
     int pageIterator;
+    int numberOfRepositories;
     string endCursor = "";
+    string repositoryName;
     hasNextPage = true;
-
+    http:OutRequest httpOutRequest;
+    http:InResponse httpInResponse;
     while(pageIterator < numberOfPages) {
         var response, typeConversionError = (json)responseVector.get(pageIterator);
         if(typeConversionError != null){
@@ -101,9 +99,9 @@ public function getPullRequests (collections:Vector responseVector) {
         int repositoryIterator;
         while(repositoryIterator < numberOfRepositories) {
             repositoryName = response.data.organization.repositories.nodes[repositoryIterator].name.toString();
+            log:printInfo("Get pull requests of repository - " + repositoryName);
             hasNextPage = true;
             endCursor = "";
-            
             while(hasNextPage){
                 httpOutRequest = {};
                 httpInResponse = {};
@@ -138,7 +136,6 @@ public function getPullRequests (collections:Vector responseVector) {
                                                 }
                                             }
                                         }`;
-
                 json payload = {query:QUERY};
                 httpOutRequest.setJsonPayload(payload);
                 http:HttpConnectorError  httpConnectError;
@@ -146,13 +143,14 @@ public function getPullRequests (collections:Vector responseVector) {
                 if(httpConnectError != null){
                     log:printInfo("Error in post request : " + httpConnectError.message);
                 }
-                pullRequests = httpInResponse.getJsonPayload().data.organization.repository.pullRequests;
+                json pullRequests = httpInResponse.getJsonPayload().data.organization.repository.pullRequests;
                 error typeCastError;
                 hasNextPage, typeCastError = <boolean> pullRequests.pageInfo.hasNextPage.toString();
                 if(hasNextPage){
                     endCursor = "\"" + pullRequests.pageInfo.endCursor.toString() + "\"";
                 }
                 if(pullRequests.nodes != null){
+                    log:printInfo("Generate mySQL parameter for pull requests of " + repositoryName);
                     generateData(pullRequests, "pullRequest");
                 }
             }
@@ -162,19 +160,20 @@ public function getPullRequests (collections:Vector responseVector) {
     }
 }
 
-
-@Description { value:"get issues of given repositories"}
+@Description { value:"get issues of given repositories (with pagination)"}
 @Param { value:"responseVector: vector contains all repositories name"}
 public function getIssues (collections:Vector responseVector) {
     endpoint <http:HttpClient> httpGithubClient {
         create http:HttpClient ("https://api.github.com/graphql",{});
     }
-
     int numberOfPages = responseVector.vectorSize;
     int pageIterator;
+    int numberOfRepositories;
     string endCursor = "";
+    string repositoryName;
     hasNextPage = true;
-
+    http:OutRequest httpOutRequest;
+    http:InResponse httpInResponse;
     while(pageIterator < numberOfPages) {
         var response, typeConversionError = (json)responseVector.get(pageIterator);
         if(typeConversionError != null){
@@ -184,13 +183,12 @@ public function getIssues (collections:Vector responseVector) {
         int repositoryIterator;
         while(repositoryIterator < numberOfRepositories) {
             repositoryName = response.data.organization.repositories.nodes[repositoryIterator].name.toString();
+            log:printInfo("Get issues of repository - " + repositoryName);
             hasNextPage = true;
             endCursor = "";
-
             while(hasNextPage){
                 httpOutRequest = {};
                 httpInResponse = {};
-
                 httpOutRequest.addHeader("Authorization","Bearer "+config:getGlobalValue("access_token"));
                 string QUERY = string `{
                                             organization(login:\"wso2\") {
@@ -216,7 +214,6 @@ public function getIssues (collections:Vector responseVector) {
                                                 }
                                             }
                                         }`;
-
                 json payload = {query:QUERY};
                 httpOutRequest.setJsonPayload(payload);
                 http:HttpConnectorError  httpConnectError;
@@ -225,12 +222,13 @@ public function getIssues (collections:Vector responseVector) {
                     log:printInfo("Error in post request : " + httpConnectError.message);
                 }
                 error typeCastError;
-                issues = httpInResponse.getJsonPayload().data.organization.repository.issues;
+                json issues = httpInResponse.getJsonPayload().data.organization.repository.issues;
                 hasNextPage, typeCastError = <boolean> issues.pageInfo.hasNextPage.toString();
                 if(hasNextPage){
                     endCursor = "\"" + issues.pageInfo.endCursor.toString() + "\"";
                 }
                 if(issues.nodes != null){
+                    log:printInfo("Generate mySQL parameter for issues of " + repositoryName);
                     generateData(issues, "issue");
                 }
             }

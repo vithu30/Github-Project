@@ -3,7 +3,7 @@
 // WSO2 Inc. licenses this file to you under the Apache License,
 // Version 2.0 (the "License"); you may not use this file except
 // in compliance with the License.
-// You may obtain a copy of the License at
+// You may obtain a copy of the License atdeshanigtk
 //
 // http://www.apache.org/licenses/LICENSE-2.0
 //
@@ -21,17 +21,12 @@ import ballerina.time;
 import ballerina.log;
 import ballerina.config;
 
-int openFor;
 int pullRequestArrayIndex;
 int issueArrayIndex;
-int[] update;
-string createdAt;
 string username = config:getGlobalValue("username");
 string password = config:getGlobalValue("password");
-time:Time createdTime;
 sql:Parameter[][] issueArray = [];
 sql:Parameter[][] pullRequestArray = [];
-
 
 @Description { value:"write pull requests and issues data into database"}
 public function writeRawData(){
@@ -39,34 +34,35 @@ public function writeRawData(){
              create sql:ClientConnector(sql:DB.MYSQL, "localhost", 3306, "FilteredData", username, password,
                             {maximumPoolSize:5, url:"jdbc:mysql://localhost:3306/FilteredData?useSSL=false"});
     }
-    
+    log:printInfo("Database connection established");
+    int[] update;
     try{
         int output = databaseConnector.update("TRUNCATE pullRequests",null);
+        log:printInfo("Olde entries in pullReuquests table are removed");
         output = databaseConnector.update("TRUNCATE issues",null);
+        log:printInfo("Olde entries in issues table are removed");
     }
     catch (error e) {
         log:printInfo("Error caused in deletion of existing data : " + e.message);
     }
-    
     try{
         update = databaseConnector.batchUpdate("INSERT INTO pullRequests
         (RepositoryName, Url, GithubId, Days, Weeks, State) VALUES (?,?,?,?,?,?)", pullRequestArray);
+        log:printInfo("New entries added to pullRequests");
     }
     catch(error e){
         log:printInfo("Error caused in batch update : " + e.message);
     }
-    
     try{
         update = databaseConnector.batchUpdate("INSERT INTO issues
         (RepositoryName, Url, GithubId, Days, Weeks) VALUES (?,?,?,?,?)", issueArray);
+        log:printInfo("New entries added to issues");
     }
     catch (error e) {
         log:printInfo("Error caused in batch update : " + e.message);
     }
     databaseConnector.close();
-    
 }
-
 
 @Description { value:"Reading data from database"}
 @Param { value:"tableName: Name of the table from which data has to be fetched"}
@@ -75,31 +71,30 @@ public function readData(string tableName)(json){
         create sql:ClientConnector(sql:DB.MYSQL, "localhost", 3306, "FilteredData", username, password,
                                    {maximumPoolSize:5, url:"jdbc:mysql://localhost:3306/FilteredData?useSSL=false"});
     }
+    log:printInfo("Database connection established");
     string state = "";
     if(tableName == "pullRequests"){
         state = "State,";
     }
-
+    
     // Query to return issues / pull requests sent by outsiders ,  repositories ,
     // respective product , url of issue and open duration by comparing
     // list of whole open issues / pull reuqests with list of users from WSO2
     // and product, repositories mapping.
-
+    
+    log:printInfo("Reading from database");
     table filteredData = databaseConnector.select("SELECT RepositoryName,Url,Days,Weeks," + state +
                                                   "githubId,product FROM "  + tableName +
                                                   " LEFT OUTER JOIN WSO2contributors ON " + tableName +
                                                   ".GithubId=WSO2contributors.userId LEFT OUTER JOIN product ON "+
                                                   tableName + ".RepositoryName=product.RepoName WHERE
                                                   WSO2contributors.userId is null",null,null);
-
-   
     var jsonData, typeConversionError = <json>filteredData;
     if(typeConversionError != null){
         log:printInfo("Error in converting table to json : " + typeConversionError.message);
     }
     return jsonData;
 }
-
 
 @Description { value:"Convert data from json to sql:Parameter type"}
 @Param { value:"jsonPayload: json data read obtained from github API"}
@@ -116,21 +111,24 @@ public function generateData(json jsonPayload, string dataType){
     sql:Parameter[] issueParams = [];
     string githubID;
     string stringState;
+    time:Time createdTime;
+    int openFor;
+    string createdAt;
+    
+    // Iterating through pull requests or issues from each repository and
+    // generate data in sql:Parameter format.
     
     while(iterator < lengthof jsonPayload.nodes){
         repoName = {sqlType:sql:Type.VARCHAR, value:jsonPayload.nodes[iterator].repository.name.toString()};
         url = {sqlType:sql:Type.VARCHAR, value:jsonPayload.nodes[iterator].url.toString()};
-
         githubID = jsonPayload.nodes[iterator].author != null ?
                    jsonPayload.nodes[iterator].author.login.toString() : "null";
         githubId = {sqlType:sql:Type.VARCHAR, value:githubID};
-
         createdAt = jsonPayload.nodes[iterator].createdAt.toString();
         createdTime = time:parse(createdAt,"yyyy-MM-dd'T'HH:mm:ss'Z'");
         openFor = (time:currentTime().time - createdTime.time)/(1000*3600);
         openDays = {sqlType:sql:Type.INTEGER, value:(openFor/24)};
         openWeeks = {sqlType:sql:Type.INTEGER, value:(openFor/(24*7))};
-        
         if(dataType=="pullRequest"){
             if(lengthof jsonPayload.nodes[iterator].reviews.nodes == 1){
                 stringState = jsonPayload.nodes[iterator].reviews.nodes[0].state.toString();

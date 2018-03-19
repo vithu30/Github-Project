@@ -16,17 +16,18 @@
 
 import org.WSO2.Ballerina;
 import ballerina.collections;
-import ballerina.io;
+import ballerina.log;
 
 function main (string[] args) {
+    log:printInfo("Prgram initiated");
     collections:Vector reposVector = Ballerina:getRepositories();
     Ballerina:getPullRequests(reposVector);
     Ballerina:getIssues(reposVector);
     Ballerina:writeRawData();
-    io:println("writing success");
+    log:printInfo("writing success");
     json pullRequests = Ballerina:readData("pullRequests");
     json issues = Ballerina:readData("issues");
-    io:println("reading success");
+    log:printInfo("reading success");
     Ballerina:generateMailBody(pullRequests,issues);
-    io:println("sending success");
+    log:printInfo("sending success");
 }
