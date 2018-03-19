@@ -36,14 +36,14 @@ public function send(string to,string subject, string accessToken, string messag
     string from = "mailapitest6@gmail.com";
     string contentType = "text/html; charset=iso-8859-1";
     string concatMessage = "";
-//string cc = "engineering-group@wso2.com,rohan@wso2.com,shankar@wso2.com";
+    string cc = "engineering-group@wso2.com,rohan@wso2.com,shankar@wso2.com";
     http:OutRequest httpRequest = {};
     http:InResponse httpResponse = {};
     
     concatMessage = concatMessage + "to:" + to + "\n" +
                                     "subject:" + subject + "\n" +
                                     "from:" + from + "\n" +
-                                    //"cc:" + cc + "\n" +
+                                    "cc:" + cc + "\n" +
                                     "Content-Type:" + contentType + "\n" +
                                     "\n" + message + "\n";
 
@@ -138,6 +138,8 @@ public function generateMailBody(json pullRequests, json issues) {
         pullRequestMessage = "";
         issueMessage = "";
 
+        // Generate body of table for pull requests
+        
         while(iterator < lengthof pullRequests){
             product = pullRequests[iterator].product != null ? pullRequests[iterator].product.toString() :
                       "No build defined";
@@ -157,12 +159,12 @@ public function generateMailBody(json pullRequests, json issues) {
 
             iterator = iterator + 1;
         }
-
         iterator = 0;
-
+        
+        // Generate body of table for issues
+        
         while(iterator < lengthof issues){
             product = issues[iterator].product != null ? issues[iterator].product.toString() : "No build defined";
-
             if(product == str){
                 issuesCount = issuesCount + 1;
                 issueMessage = issueMessage +
@@ -179,6 +181,9 @@ public function generateMailBody(json pullRequests, json issues) {
         }
         iterator = 0;
 
+        // Send mail with tables considering whether issues / pull requests
+        // exists or not
+        
         if(pullRequestCount > 0 || issuesCount > 0){
             if(checkAccessToken(accessToken)){
                 accessToken = refreshAccessToken();
