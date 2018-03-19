@@ -233,7 +233,7 @@ public function generateMailBody(json pullRequests, json issues) {
                               </html>";
                 }
             }
-            to =  mailingList[index] != "" ? mailingList[index] : "vithu9330@gmail.com";
+            to =  mailingList[index] != "" ? mailingList[index] : "engineering-group@wso2.com";
             send(to,"Open PRs and issues from non WSO2 committers : " + str,accessToken,message);
         }
         index = index + 1;
