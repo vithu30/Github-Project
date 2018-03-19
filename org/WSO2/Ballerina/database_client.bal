@@ -38,9 +38,9 @@ public function writeRawData(){
     int[] update;
     try{
         int output = databaseConnector.update("TRUNCATE pullRequests",null);
-        log:printInfo("Olde entries in pullReuquests table are removed");
+        log:printInfo("Old entries in pullReuquests table are removed");
         output = databaseConnector.update("TRUNCATE issues",null);
-        log:printInfo("Olde entries in issues table are removed");
+        log:printInfo("Old entries in issues table are removed");
     }
     catch (error e) {
         log:printInfo("Error caused in deletion of existing data : " + e.message);
