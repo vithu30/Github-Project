@@ -27,7 +27,5 @@ function main (string[] args) {
     log:printInfo("successfully wrote to database");
     json pullRequests = Ballerina:readData("pullRequests");
     json issues = Ballerina:readData("issues");
-    log:printInfo("read filtered data from database");
     Ballerina:generateMailBody(pullRequests,issues);
-    log:printInfo("mail sending success");
 }

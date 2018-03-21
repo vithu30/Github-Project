@@ -33,8 +33,6 @@ public function send(string to,string subject, string accessToken, string messag
     endpoint<http:HttpClient> httpConnectorEP {
         httpClient;
     }
-    string from = "mailapitest6@gmail.com";
-    string contentType = "text/html; charset=iso-8859-1";
     string concatMessage = "";
     string cc = "engineering-group@wso2.com,rohan@wso2.com,shankar@wso2.com";
     http:OutRequest httpRequest = {};
@@ -42,22 +40,22 @@ public function send(string to,string subject, string accessToken, string messag
     
     concatMessage = concatMessage + "to:" + to + "\n" +
                                     "subject:" + subject + "\n" +
-                                    "from:" + from + "\n" +
+                                    "from:" + FROM + "\n" +
                                     "cc:" + cc + "\n" +
-                                    "Content-Type:" + contentType + "\n" +
+                                    "Content-Type:" + CONTENT_TYPE + "\n" +
                                     "\n" + message + "\n";
 
     string encodedRequest = util:base64Encode(concatMessage);
     encodedRequest = encodedRequest.replace("+","-");
     encodedRequest = encodedRequest.replace("/","_");
     json sendMailRequest = {"raw": encodedRequest};
-    string sendMailPath = "/v1/users/" + from + "/messages/send";
-    httpRequest.addHeader("Authorization", "Bearer " + accessToken);
+    string sendMailPath = "/v1/users/" + FROM + "/messages/send";
+    httpRequest.addHeader(GMAIL_AUTHORIZATION, GMAIL_BEARER + accessToken);
     httpRequest.setHeader("Content-Type", "application/json");
     httpRequest.setJsonPayload(sendMailRequest);
     httpResponse, httpConnectorError = httpConnectorEP.post(sendMailPath, httpRequest);
     if(httpConnectorError != null){
-        log:printInfo("Error in sending mail : " + httpConnectorError.message);
+        log:printError("Error in sending mail : " + httpConnectorError.message);
     }
 }
 
@@ -233,18 +231,19 @@ public function generateMailBody(json pullRequests, json issues) {
                               </html>";
                 }
             }
-            to =  mailingList[index] != "" ? mailingList[index] : "vithu9330@gmail.com";
+            to =  mailingList[index] != "" ? mailingList[index] : "engineering-group@wso2.com";
             send(to,"Open PRs and issues from non WSO2 committers : " + str,accessToken,message);
         }
         index = index + 1;
     }
+    log:printInfo("mail sending success");
 }
 
 @Description { value:"check whether the access token is expired or not"}
 @Param { value:"accessToken: access token of the gmail account"}
 public function checkAccessToken(string accessToken)(boolean){
     endpoint<http:HttpClient> httpConnector {
-        create http:HttpClient("https://www.googleapis.com/oauth2/v1", {});
+        create http:HttpClient(GMAIL_API_CHECK_ACCESS_TOKEN_URL, {});
     }
     boolean isExpired = false;
     http:OutRequest httpRequest = {};
@@ -254,24 +253,30 @@ public function checkAccessToken(string accessToken)(boolean){
     httpRequest.setJsonPayload("access_token=" + accessToken);
     httpResponse, httpConnectorError = httpConnector.post("/tokeninfo", httpRequest);
     if(httpConnectorError != null){
-        log:printInfo("Error in checking access token : " + httpConnectorError.message);
+        log:printError("Error in checking access token : " + httpConnectorError.message);
     }
     json jsonResponse = httpResponse.getJsonPayload();
-    if(jsonResponse.error_description != null) {
-        isExpired = true;
+    try{
+        if(jsonResponse.error_description != null) {
+            isExpired = true;
+        }
     }
+    catch (error err) {
+        log:printError("Error in getting response" + err.message);
+    }
+    
     return isExpired;
 }
 
 @Description { value:"generate new access token from refresh token"}
 public function refreshAccessToken () (string) {
     endpoint<http:HttpClient> refreshTokenHTTPEP {
-        create http:HttpClient("https://www.googleapis.com/oauth2/v4", {});
+        create http:HttpClient(GMAIL_API_REFRESH_TOKEN_URL, {});
     }
     string accessToken;
-    string refreshToken = config:getGlobalValue("refresh_token");
-    string clientId = config:getGlobalValue("client_id");
-    string clientSecret = config:getGlobalValue("client_secret");
+    string refreshToken = config:getGlobalValue("REFRESH_TOKEN");
+    string clientId = config:getGlobalValue("CLIENT_ID");
+    string clientSecret = config:getGlobalValue("CLIENT_SECRET");
     string request = "grant_type=refresh_token" + "&client_id=" + clientId +
                      "&client_secret=" + clientSecret +"&refresh_token=" + refreshToken;
     http:OutRequest httpRequest = {};
@@ -281,9 +286,13 @@ public function refreshAccessToken () (string) {
     httpRequest.setStringPayload(request);
     httpResponse,httpConnectorError = refreshTokenHTTPEP.post("/token", httpRequest);
     if(httpConnectorError != null){
-        log:printInfo("Error in generating access token : " + httpConnectorError.message);
+        log:printError("Error in generating access token : " + httpConnectorError.message);
     }
     json response = httpResponse.getJsonPayload();
-    accessToken = response.access_token.toString();
+    try{
+        accessToken = response.access_token.toString();
+    }catch (error err) {
+        log:printError(response.error.toString());
+    }
     return accessToken;
 }

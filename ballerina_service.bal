@@ -18,18 +18,21 @@ import ballerina.net.http;
 import ballerina.data.sql;
 import ballerina.log;
 import ballerina.config;
+import org.WSO2.Ballerina;
 
-string username = config:getGlobalValue("username");
-string password = config:getGlobalValue("password");
+string username = config:getGlobalValue("USERNAME");
+string password = config:getGlobalValue("PASSWORD");
+string hostOrPath = config:getGlobalValue("HOST");
+string databaseName = config:getGlobalValue("DATABASE_NAME");
+int port = Ballerina:getPortNumber();
 sql:ClientConnector clientConnector = create sql:ClientConnector(
                                         sql:DB.MYSQL,
-                                        "localhost",
-                                         3306,
-                                        "FilteredData",
+                                        hostOrPath,
+                                        port,
+                                        databaseName+"?useSSL=false",
                                         username,
                                         password,
-                                        {maximumPoolSize:5,
-                                            url:"jdbc:mysql://localhost:3306/FilteredData?useSSL=false"});
+                                        {maximumPoolSize:5});
 
 
 service<http> ballerinaService {

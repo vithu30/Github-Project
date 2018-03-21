@@ -20,55 +20,47 @@ import ballerina.net.http;
 import ballerina.collections;
 import ballerina.config;
 import ballerina.log;
+import ballerina.runtime;
+import ballerina.io;
 
 boolean hasNextPage = true;
+string endCursor;
+string organization = "wso2";
 http:HttpClient httpGithubClient = create http:HttpClient ("https://api.github.com/graphql",{});
 
 @Description { value:"get all repositories name by traversing all pages"}
 public function getRepositories () (collections:Vector) {
-    endpoint <http:HttpClient> httpGithubEP {
-        httpGithubClient;
-    }
     log:printInfo("Connection established with github API");
-    string QUERY;
-    string endCursor = "";
+    string repositoryQuery;
     collections:Vector responseVector = {vec:[]};
-    http:OutRequest httpOutRequest;
-    http:InResponse httpInResponse;
+    boolean flag = true;
     while(hasNextPage){
-        httpOutRequest = {};
-        httpInResponse = {};
-        QUERY = string `{
-                            organization(login:\"wso2\") {
-                                repositories(first: 100,after:{{endCursor}}) {
-                                    pageInfo {
-                                        hasNextPage
-                                        endCursor
-                                    }
-                                    nodes {
-                                        name
-                                    }
-                                }
-                            }
-                        }`;
-        httpOutRequest.addHeader("Authorization" , "Bearer " + config:getGlobalValue("access_token"));
-        json jsonPayLoad = {query:QUERY};
-        httpOutRequest.setJsonPayload(jsonPayLoad);
-        http:HttpConnectorError httpConnectorError;
-        httpInResponse, httpConnectorError = httpGithubEP.post("", httpOutRequest);
-        if(httpConnectorError != null) {
-            log:printInfo("Error in post request : " + httpConnectorError.message);
+        if(flag){
+            repositoryQuery  = string `{"{{GIT_VARIABLES}}":{"{{GIT_LOGIN}}":"{{organization}}"},
+                                            "{{GIT_QUERY}}":"{{FIRST_PAGE_REPOSITORY_QUERY}}"}`;
+            flag = false;
         }
-        json response = httpInResponse.getJsonPayload();
+        else{
+            repositoryQuery = string `{"{{GIT_VARIABLES}}":
+                                        {"{{GIT_LOGIN}}":"{{organization}}","{{GIT_END_CURSOR}}":"{{endCursor}}"},
+                                        "{{GIT_QUERY}}":"{{NEXT_PAGE_REPOSITORY_QUERY}}"}`;
+        }
+        
+        var jsonQuery, _ = <json> repositoryQuery;
+        json response = generateHttpClient(jsonQuery);
         responseVector.add(response);
         error typeConversionError;
-        hasNextPage, typeConversionError =
-                    <boolean> response.data.organization.repositories.pageInfo.hasNextPage.toString();
-        if(typeConversionError != null){
-            log:printInfo("Error occured in conversion to boolean : " + typeConversionError.message);
+        try{
+            hasNextPage, typeConversionError =
+            <boolean> response.data.organization.repositories.pageInfo.hasNextPage.toString();
+        } catch (error err) {
+            log:printError("Error in fetching data from GraphQL API : " + err.message);
+            if(typeConversionError != null){
+                log:printError("Error occured in conversion to boolean : " + typeConversionError.message);
+            }
         }
         if(hasNextPage){
-            endCursor = "\"" + response.data.organization.repositories.pageInfo.endCursor.toString() + "\"";
+            endCursor =  response.data.organization.repositories.pageInfo.endCursor.toString();
         }
     }
     log:printInfo("List of repositories is generated");
@@ -78,22 +70,18 @@ public function getRepositories () (collections:Vector) {
 @Description { value:"get pull requests of given repositories (with pagination)"}
 @Param { value:"responseVector: vector contains all repositories name"}
 public function getPullRequests (collections:Vector responseVector) {
-    endpoint <http:HttpClient> httpGithubEP {
-        httpGithubClient;
-    }
     log:printInfo("Connection established with github API");
     int numberOfPages = responseVector.vectorSize;
     int pageIterator;
     int numberOfRepositories;
-    string endCursor = "";
+    string endCursor;
     string repositoryName;
+    boolean flag = true;
     hasNextPage = true;
-    http:OutRequest httpOutRequest;
-    http:InResponse httpInResponse;
     while(pageIterator < numberOfPages) {
         var response, typeConversionError = (json)responseVector.get(pageIterator);
         if(typeConversionError != null){
-            log:printInfo("Error in conversion to json : " + typeConversionError.message);
+            log:printError("Error in conversion to json : " + typeConversionError.message);
         }
         numberOfRepositories = lengthof response.data.organization.repositories.nodes;
         int repositoryIterator;
@@ -101,56 +89,28 @@ public function getPullRequests (collections:Vector responseVector) {
             repositoryName = response.data.organization.repositories.nodes[repositoryIterator].name.toString();
             log:printInfo("Get pull requests of repository - " + repositoryName);
             hasNextPage = true;
-            endCursor = "";
+            flag = true;
+            string pullRequestQuery;
             while(hasNextPage){
-                httpOutRequest = {};
-                httpInResponse = {};
-                httpOutRequest.addHeader("Authorization","Bearer " + config:getGlobalValue("access_token"));
-                string QUERY = string `{
-                                            organization(login:\"wso2\") {
-                                                repository(name:\"{{repositoryName}}\") {
-                                                    pullRequests(first:100, states:[OPEN],after:{{endCursor}}) {
-                                                        pageInfo{
-                                                            hasNextPage
-                                                            endCursor
-                                                        }
-                                                        nodes {
-                                                            repository {
-                                                                name
-                                                            }
-                                                            createdAt
-                                                            url
-                                                            author {
-                                                                login
-                                                            }
-                                                            reviews(last:1, states:[APPROVED,CHANGES_REQUESTED,
-                                                                DISMISSED,PENDING,COMMENTED]){
-                        	                                    nodes{
-                                                                    state
-                                                                }
-                                                            }
-                                                        }
-
-                                                    }
-
-                                                }
-                                            }
-                                        }`;
-                json payload = {query:QUERY};
-                httpOutRequest.setJsonPayload(payload);
-                http:HttpConnectorError  httpConnectError;
-                httpInResponse,httpConnectError = httpGithubEP.post("",httpOutRequest);
-                if(httpConnectError != null){
-                    log:printInfo("Error in post request : " + httpConnectError.message);
+                if(flag){
+                    pullRequestQuery = string `{"{{GIT_VARIABLES}}":
+                    {"{{GIT_LOGIN}}":"{{organization}}","{{GIT_NAME}}":"{{repositoryName}}"},
+                    "{{GIT_QUERY}}":"{{FIRST_PAGE_PULL_REQUEST_QUERY}}"}`;
+                    flag = false;
                 }
-                json pullRequests = httpInResponse.getJsonPayload().data.organization.repository.pullRequests;
+                else{
+                    pullRequestQuery = string `{"{{GIT_VARIABLES}}":
+                    {"{{GIT_LOGIN}}":"{{organization}}","{{GIT_NAME}}":"{{repositoryName}}",
+                            "{{GIT_END_CURSOR}}":"{{endCursor}}"},"{{GIT_QUERY}}":"{{NEXT_PAGE_PULL_REQUEST_QUERY}}"}`;
+                }
+                var jsonPayload, _ = <json> pullRequestQuery;
+                json pullRequests = generateHttpClient(jsonPayload).data.organization.repository.pullRequests;
                 error typeCastError;
                 hasNextPage, typeCastError = <boolean> pullRequests.pageInfo.hasNextPage.toString();
                 if(hasNextPage){
-                    endCursor = "\"" + pullRequests.pageInfo.endCursor.toString() + "\"";
+                    endCursor =  pullRequests.pageInfo.endCursor.toString();
                 }
                 if(pullRequests.nodes != null){
-                    log:printInfo("Generate mySQL parameter for pull requests of " + repositoryName);
                     generateData(pullRequests, "pullRequest");
                 }
             }
@@ -163,21 +123,18 @@ public function getPullRequests (collections:Vector responseVector) {
 @Description { value:"get issues of given repositories (with pagination)"}
 @Param { value:"responseVector: vector contains all repositories name"}
 public function getIssues (collections:Vector responseVector) {
-    endpoint <http:HttpClient> httpGithubClient {
-        create http:HttpClient ("https://api.github.com/graphql",{});
-    }
     int numberOfPages = responseVector.vectorSize;
     int pageIterator;
     int numberOfRepositories;
     string endCursor = "";
     string repositoryName;
+    string issueQuery;
     hasNextPage = true;
-    http:OutRequest httpOutRequest;
-    http:InResponse httpInResponse;
+    boolean flag = true;
     while(pageIterator < numberOfPages) {
         var response, typeConversionError = (json)responseVector.get(pageIterator);
         if(typeConversionError != null){
-            log:printInfo("Error in conversion to json : " + typeConversionError.message);
+            log:printError("Error in conversion to json : " + typeConversionError.message);
         }
         numberOfRepositories = lengthof response.data.organization.repositories.nodes;
         int repositoryIterator;
@@ -185,50 +142,27 @@ public function getIssues (collections:Vector responseVector) {
             repositoryName = response.data.organization.repositories.nodes[repositoryIterator].name.toString();
             log:printInfo("Get issues of repository - " + repositoryName);
             hasNextPage = true;
+            flag = true;
             endCursor = "";
             while(hasNextPage){
-                httpOutRequest = {};
-                httpInResponse = {};
-                httpOutRequest.addHeader("Authorization","Bearer "+config:getGlobalValue("access_token"));
-                string QUERY = string `{
-                                            organization(login:\"wso2\") {
-                                                repository(name:\"{{repositoryName}}\") {
-                                                    issues(first:100, states:[OPEN],after:{{endCursor}}) {
-                                                        pageInfo {
-                                                            hasNextPage
-                                                            endCursor
-                                                        }
-
-                                                        nodes {
-                                                            repository {
-                                                                name
-                                                            }
-                                                            createdAt
-                                                            url
-                                                            author {
-                                                              login
-                                                            }
-                                                        }
-
-                                                    }
-                                                }
-                                            }
-                                        }`;
-                json payload = {query:QUERY};
-                httpOutRequest.setJsonPayload(payload);
-                http:HttpConnectorError  httpConnectError;
-                httpInResponse,httpConnectError = httpGithubClient.post("",httpOutRequest);
-                if(httpConnectError != null){
-                    log:printInfo("Error in post request : " + httpConnectError.message);
+                if(flag){
+                    issueQuery = string `{"{{GIT_VARIABLES}}":{"{{GIT_LOGIN}}":"{{organization}}",
+                    "{{GIT_NAME}}":"{{repositoryName}}"},"{{GIT_QUERY}}":"{{FIRST_PAGE_ISSUE_QUERY}}"}`;
+                    flag = false;
                 }
+                else{
+                    issueQuery = string `{"{{GIT_VARIABLES}}":{"{{GIT_LOGIN}}":"{{organization}}",
+                    "{{GIT_NAME}}":"{{repositoryName}}","{{GIT_END_CURSOR}}":"{{endCursor}}"},
+                    "{{GIT_QUERY}}":"{{NEXT_PAGE_ISSUE_QUERY}}"}`;
+                }
+                var jsonPayload, _ = <json> issueQuery;
                 error typeCastError;
-                json issues = httpInResponse.getJsonPayload().data.organization.repository.issues;
+                json issues = generateHttpClient(jsonPayload).data.organization.repository.issues;
                 hasNextPage, typeCastError = <boolean> issues.pageInfo.hasNextPage.toString();
                 if(hasNextPage){
-                    endCursor = "\"" + issues.pageInfo.endCursor.toString() + "\"";
+                    endCursor = issues.pageInfo.endCursor.toString();
                 }
                 if(issues.nodes != null){
-                    log:printInfo("Generate mySQL parameter for issues of " + repositoryName);
                     generateData(issues, "issue");
                 }
             }
@@ -236,4 +170,21 @@ public function getIssues (collections:Vector responseVector) {
         }
         pageIterator = pageIterator + 1;
     }
+}
+
+public function generateHttpClient (json jsonPayload) (json) {
+    endpoint <http:HttpClient> httpGithubEP {
+        httpGithubClient;
+    }
+    http:OutRequest httpOutRequest = {};
+    http:InResponse httpInResponse = {};
+    httpOutRequest.addHeader("Authorization","Bearer " + config:getGlobalValue("ACCESS_TOKEN"));
+    httpOutRequest.setJsonPayload(jsonPayload);
+    http:HttpConnectorError  httpConnectError;
+    httpInResponse,httpConnectError = httpGithubEP.post("",httpOutRequest);
+    if(httpConnectorError != null) {
+        log:printInfo("Error in post request : " + httpConnectorError.message);
+    }
+    json response = httpInResponse.getJsonPayload();
+    return response;
 }
